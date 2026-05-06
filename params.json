@@ -294,6 +294,11 @@
       "login": "VladaGusakova",
       "id": "gusakova",
       "app": "catty-reminders-app"
+    },
+    {
+      "login": "RomaError5",
+      "id": "otyubrin",
+      "app": "catty-reminders-app"
     }
   ]
 }
