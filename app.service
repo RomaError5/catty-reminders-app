@@ -1,0 +1,16 @@
+[Unit]
+Description=Catty Reminders FastAPI service
+After=network.target
+
+[Service]
+Type=simple
+User=romaerror5
+Group=romaerror5
+WorkingDirectory=/home/romaerror5/Desktop/devops/catty-reminders-app
+EnvironmentFile=/home/romaerror5/Desktop/devops/catty-reminders-app/.env
+ExecStart=/home/romaerror5/Desktop/devops/catty-reminders-app/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8181
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
