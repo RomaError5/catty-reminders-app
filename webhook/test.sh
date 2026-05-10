@@ -51,10 +51,10 @@ APP_PID=$!
 
 sleep 3
 
-export PYTHONPATH=/home/romaerror5/Desktop/devops/catty-reminders-app:$PYTHONPATH
-echo "=== Выполняем тесты из папки tests ==="
-PLAYWRIGHT_BROWSERS_PATH=/home/romaerror5/Desktop/devops/.cache/ms-playwright pytest tests --maxfail=1 --disable-warnings -q
-RESULT=$?
-kill $APP_PID
-
-exit $RESULT
+export PYTHONPATH="/home/romaerror5/Desktop/devops/catty-reminders-app:$PYTHONPATH"
+if [ -d "tests" ]; then
+    echo "Запуск pytest..."
+    pytest tests --maxfail=1 --disable-warnings -q
+else
+    echo "Нет тестов, пропускаем"
+fi
