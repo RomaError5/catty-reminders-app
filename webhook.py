@@ -7,7 +7,7 @@ class WebhookManager:
         self.app = Flask(__name__)
         self.port = 8080
         self.app_dir = "/home/romaerror5/Desktop/devops/catty-reminders-app"
-        self.service_name = "catty-app"
+        self.service_name = "app"
         self.env_file = "/home/romaerror5/Desktop/devops/catty-reminders-app/.env"
         self._register_routes()
     
