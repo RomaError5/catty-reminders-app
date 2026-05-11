@@ -13,6 +13,8 @@ import subprocess
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+sys.stdout.reconfigure(line_buffering=True)
+
 # ========== Конфигурация через переменные окружения ==========
 REPO_URL = os.environ.get('REPO_URL', 'https://github.com/RomaError5/catty-reminders-app.git')
 APP_DIR = os.environ.get('APP_DIR', '/home/romaerror5/Desktop/devops/catty-reminders-app')
@@ -46,6 +48,8 @@ class WebhookHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Приём webhook от GitHub"""
+        print(f"Headers: {self.headers}", flush=True)
+        print(f"Event: {self.headers.get('X-GitHub-Event')}", flush=True)
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length)
         signature = self.headers.get('X-Hub-Signature-256', '')
