@@ -1,189 +1,51 @@
-#!/usr/bin/env python3
-"""
-GitHub Webhook Receiver для автоматического развертывания приложения.
-Ожидает push-события, обновляет код, запускает тесты и перезапускает сервис.
-"""
-
-import os
-import sys
-import json
-import hmac
-import hashlib
+from flask import Flask, request, jsonify
 import subprocess
-from datetime import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
 
-# ========== Конфигурация через переменные окружения ==========
-REPO_URL = os.environ.get('REPO_URL', 'https://github.com/RomaError5/catty-reminders-app.git')
-APP_DIR = os.environ.get('APP_DIR', '/home/romaerror5/Desktop/devops/catty-reminders-app')
-PORT = int(os.environ.get('WEBHOOK_PORT', 8080))
-SERVICE_NAME = os.environ.get('SERVICE_NAME', 'app.service')
-USE_SUDO = os.environ.get('USE_SUDO', 'true').lower() == 'true'
+class WebhookManager:
+    def __init__(self):
+        self.app = Flask(__name__)
+        self.port = 8080
+        self.app_dir = "/home/romaerror5/Desktop/devops/catty-reminders-app"
+        self.service_name = "catty-app"
+        self.env_file = "/home/romaerror5/Desktop/devops/catty-reminders-app/.env"
+        self._register_routes()
+    
+    def _register_routes(self):
+        self.app.route('/', methods=['GET', 'POST'])(self.handle_request)
+    
+    def handle_request(self):
+        if request.method == 'GET':
+            return jsonify({"message": "Webhook handler running"}), 200
+        
+        if request.headers.get('X-GitHub-Event') == 'push':
+            payload = request.json
+            commit_sha = payload.get('after') if payload else None
+            
+            if not commit_sha or commit_sha == '0' * 40:
+                return jsonify({"message": "No valid SHA"}), 200
+            
+            self._deploy(commit_sha)
+            return jsonify({"message": "Deployment completed"}), 200
+        
+        return jsonify({"message": "Not a push event"}), 200
+    
+    def _deploy(self, sha):
+        print(">>> Starting deployment...")
+        
+        subprocess.run(["git", "-C", self.app_dir, "pull"], check=True)
+        print(">>> Code updated")
+        
+        with open(self.env_file, "w") as f:
+            f.write(f"DEPLOY_REF={sha}")
+        print(f">>> DEPLOY_REF written: {sha}")
+        
+        subprocess.run(["sudo", "systemctl", "restart", self.service_name], check=True)
+        print(">>> Service restarted")
+    
+    def run(self):
+        self.app.run(host='0.0.0.0', port=self.port)
 
-class WebhookHandler(BaseHTTPRequestHandler):
-    """Обработчик HTTP запросов для GitHub Webhook"""
-
-    def do_GET(self):
-        """Страница статуса сервера"""
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html; charset=utf-8')
-        self.end_headers()
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><title>DevOps Webhook Server</title><meta charset="utf-8"></head>
-        <body style="font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-            <h1>🚀 DevOps Webhook Receiver</h1>
-            <p><strong>Статус:</strong> активен</p>
-            <p><strong>Порт:</strong> {PORT}</p>
-            <p><strong>Время запуска:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p><strong>Репозиторий:</strong> {REPO_URL}</p>
-            <p><strong>Рабочая директория:</strong> {APP_DIR}</p>
-        </body>
-        </html>
-        """
-        self.wfile.write(html.encode('utf-8'))
-
-    def do_POST(self):
-        """Приём webhook от GitHub"""
-        content_length = int(self.headers.get('Content-Length', 0))
-        body = self.rfile.read(content_length)
-        signature = self.headers.get('X-Hub-Signature-256', '')
-
-        # Определяем тип события
-        event_type = self.headers.get('X-GitHub-Event', '')
-        if event_type != 'push':
-            self._log(f"ℹ️  Игнорируем событие '{event_type}' (только push)")
-            self.send_response(200)
-            self.end_headers()
-            return
-
-        # Парсим payload
-        try:
-            payload = json.loads(body.decode('utf-8'))
-        except json.JSONDecodeError:
-            self._log("❌ Ошибка парсинга JSON")
-            self.send_response(400)
-            self.end_headers()
-            return
-
-        # Извлекаем ветку
-        ref = payload.get('ref', '')
-        if not ref.startswith('refs/heads/'):
-            self._log(f"ℹ️  Не ветка: {ref}")
-            self.send_response(200)
-            self.end_headers()
-            return
-        branch = ref.replace('refs/heads/', '')
-
-        # Логируем событие
-        repo_name = payload.get('repository', {}).get('full_name', 'unknown')
-        pusher = payload.get('pusher', {}).get('name', 'unknown')
-        self._log(f"🔔 Push в {repo_name}:{branch} от {pusher}")
-
-        # Запускаем процесс развертывания
-        try:
-            success = self._deploy(branch)
-            if success:
-                self._log("✅ Развертывание успешно завершено")
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b'{"status":"success"}')
-            else:
-                self._log("❌ Развертывание не удалось")
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(b'{"status":"failed"}')
-        except Exception as e:
-            self._log(f"❌ Исключение при развертывании: {e}")
-            self.send_response(500)
-            self.end_headers()
-
-    def _log(self, msg):
-        """Вывод лога с временной меткой"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{timestamp}] {msg}")
-
-    def _deploy(self, branch):
-        """Основная логика развертывания: клонирование/обновление, тесты, перезапуск"""
-        self._log(f"🚀 Начинаем развертывание ветки '{branch}'")
-
-        # 1. Клонируем или обновляем репозиторий
-        if not os.path.isdir(os.path.join(APP_DIR, '.git')):
-            self._log(f"Клонирование репозитория в {APP_DIR}")
-            try:
-                subprocess.run(['git', 'clone', REPO_URL, APP_DIR], check=True, capture_output=True)
-            except subprocess.CalledProcessError as e:
-                self._log(f"Ошибка клонирования: {e.stderr.decode()}")
-                return False
-        else:
-            self._log("Обновление существующего репозитория")
-            try:
-                subprocess.run(['git', '-C', APP_DIR, 'fetch', 'origin'], check=True, capture_output=True)
-            except subprocess.CalledProcessError as e:
-                self._log(f"Ошибка fetch: {e.stderr.decode()}")
-                return False
-
-        # Переключаемся на нужную ветку
-        try:
-            subprocess.run(['git', '-C', APP_DIR, 'checkout', branch], check=True, capture_output=True)
-            subprocess.run(['git', '-C', APP_DIR, 'reset', '--hard', f'origin/{branch}'], check=True, capture_output=True)
-        except subprocess.CalledProcessError as e:
-            self._log(f"Ошибка переключения на ветку {branch}: {e.stderr.decode()}")
-            return False
-
-        # Получаем текущий хеш коммита
-        commit_hash = subprocess.check_output(['git', '-C', APP_DIR, 'rev-parse', 'HEAD'], text=True).strip()
-        self._log(f"Текущий коммит: {commit_hash}")
-
-        # 2. Запуск тестов (если есть скрипт test.sh)
-        test_script = os.path.join(APP_DIR, 'test.sh')
-        if os.path.exists(test_script):
-            self._log("Запуск тестов...")
-            try:
-                # Передаём ветку как аргумент в test.sh
-                subprocess.run([test_script, branch], cwd=APP_DIR, check=True, capture_output=True)
-                self._log("✅ Тесты успешно пройдены")
-            except subprocess.CalledProcessError as e:
-                self._log(f"❌ Тесты не пройдены: код возврата {e.returncode}")
-                self._log(e.stdout.decode())
-                self._log(e.stderr.decode())
-                return False
-        else:
-            self._log("⚠️  Нет test.sh, пропускаем тесты")
-
-        # 3. Обновляем .env файл с новым DEPLOY_REF
-        env_file = os.path.join(APP_DIR, '.env')
-        with open(env_file, 'w') as f:
-            f.write(f"DEPLOY_REF={commit_hash}\n")
-        self._log("Обновлён .env файл")
-
-        # 4. Перезапуск сервиса
-        self._log(f"Перезапуск systemd сервиса {SERVICE_NAME}")
-        cmd = ['systemctl', 'restart', SERVICE_NAME]
-        if USE_SUDO:
-            cmd = ['sudo'] + cmd
-        try:
-            subprocess.run(cmd, check=True, capture_output=True)
-            self._log("✅ Сервис перезапущен")
-        except subprocess.CalledProcessError as e:
-            self._log(f"❌ Не удалось перезапустить сервис: {e.stderr.decode()}")
-            return False
-
-        return True
-
-def main():
-    """Запуск HTTP сервера"""
-    print(f"Запуск webhook-сервера на порту {PORT}")
-    print(f"Репозиторий: {REPO_URL}")
-    print(f"Рабочая директория: {APP_DIR}")
-    print(f"Сервис: {SERVICE_NAME}")
-    server = HTTPServer(('0.0.0.0', PORT), WebhookHandler)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nОстановка сервера")
-        server.shutdown()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    manager = WebhookManager()
+    manager.run()

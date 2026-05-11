@@ -1,18 +1,12 @@
 [Unit]
-Description=GitHub Webhook Receiver
+Description=Webhook Handler
 After=network.target
 
 [Service]
-Type=simple
 User=romaerror5
-WorkingDirectory=/home/romaerror5/Desktop/devops/catty-reminders-app
-Environment="REPO_URL=https://github.com/RomaError5/catty-reminders-app.git"
-Environment="APP_DIR=/home/romaerror5/Desktop/devops/catty-reminders-app"
-Environment="SERVICE_NAME=app.service"
-Environment="USE_SUDO=true"
-ExecStart=/home/romaerror5/Desktop/devops/catty-reminders-app/webhook.py
+WorkingDirectory=/home/romaerror5/Desktop/devops/webhook-handler
+ExecStart=/usr/bin/python3 /home/romaerror5/Desktop/devops/webhook-handler/webhook.py
 Restart=always
-RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
