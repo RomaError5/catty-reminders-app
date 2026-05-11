@@ -115,26 +115,17 @@ class WebhookHandler(BaseHTTPRequestHandler):
         # 1. Клонируем или обновляем репозиторий
         if not os.path.isdir(os.path.join(APP_DIR, '.git')):
             self._log(f"Клонирование репозитория в {APP_DIR}")
-            try:
-                subprocess.run(['git', 'clone', REPO_URL, APP_DIR], check=True, capture_output=True)
-            except subprocess.CalledProcessError as e:
-                self._log(f"Ошибка клонирования: {e.stderr.decode()}")
-                return False
+            subprocess.run(['git', 'clone', REPO_URL, APP_DIR], check=True, capture_output=True)
         else:
             self._log("Обновление существующего репозитория")
-            try:
-                subprocess.run(['git', '-C', APP_DIR, 'fetch', 'origin'], check=True, capture_output=True)
-            except subprocess.CalledProcessError as e:
-                self._log(f"Ошибка fetch: {e.stderr.decode()}")
-                return False
+            subprocess.run(['git', '-C', APP_DIR, 'fetch', 'origin'], check=True, capture_output=True)
+
+        # Сбрасываем все локальные изменения (особенно .env)
+        subprocess.run(['git', '-C', APP_DIR, 'reset', '--hard', 'HEAD'], check=True, capture_output=True)
 
         # Переключаемся на нужную ветку
-        try:
-            subprocess.run(['git', '-C', APP_DIR, 'checkout', branch], check=True, capture_output=True)
-            subprocess.run(['git', '-C', APP_DIR, 'reset', '--hard', f'origin/{branch}'], check=True, capture_output=True)
-        except subprocess.CalledProcessError as e:
-            self._log(f"Ошибка переключения на ветку {branch}: {e.stderr.decode()}")
-            return False
+        subprocess.run(['git', '-C', APP_DIR, 'checkout', branch], check=True, capture_output=True)
+        subprocess.run(['git', '-C', APP_DIR, 'reset', '--hard', f'origin/{branch}'], check=True, capture_output=True)
 
         # Получаем текущий хеш коммита
         commit_hash = subprocess.check_output(['git', '-C', APP_DIR, 'rev-parse', 'HEAD'], text=True).strip()
