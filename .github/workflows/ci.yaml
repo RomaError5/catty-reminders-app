@@ -1,0 +1,42 @@
+name: CI-pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install required packages
+        run: |
+          pip install -r requirements.txt pytest pytest-playwright
+          playwright install chromium
+
+      - name: Start service
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8181 &
+          for attempt in {1..20}; do
+            curl -s http://127.0.0.1:8181 && break
+            sleep 1
+          done
+
+      - name: Run pytest suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest -v --tb=short --junitxml=test_result.xml
+
+      - name: Archive test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_result
+          path: test_result.xml
