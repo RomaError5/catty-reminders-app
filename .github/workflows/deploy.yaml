@@ -13,11 +13,11 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: course.prafdin.ru
-          port: 3178
+          port: 3154
           username: romaerror5
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/romaerror5/Desktop/devops/catty-reminders-app
             git pull origin lab2
             echo "DEPLOY_REF=${{ github.sha }}" > .env
-            sudo systemctl restart catty-app
+            sudo systemctl restart app
