@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VM
+      - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: course.prafdin.ru
@@ -17,8 +17,14 @@ jobs:
           username: romaerror5
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker stop catty-container || true
-            docker rm catty-container || true
-            docker pull ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
-            docker run -d --name catty-container -p 8181:8181 \
-              ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
+            export TAG=${{ github.sha }}
+            
+            cd /home/romaerror5/Desktop/devops/catty-reminders-app
+            
+            git fetch origin
+            git checkout lab4
+            git reset --hard origin/lab4
+            
+            docker compose down || true
+            
+            docker compose up -d

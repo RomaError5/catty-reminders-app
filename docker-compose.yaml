@@ -1,0 +1,38 @@
+name: catty-reminders
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: catty
+      POSTGRES_PASSWORD: catty_password
+      POSTGRES_DB: catty
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - catty-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catty"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/romaerror5/catty-reminders-app:${TAG:-latest}
+    environment:
+      DATABASE_URL: postgresql://catty:catty_password@db:5432/catty
+    ports:
+      - "8181:8181"
+    networks:
+      - catty-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  catty-network:
+
+volumes:
+  db_data:
