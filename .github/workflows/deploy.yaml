@@ -17,14 +17,20 @@ jobs:
           username: romaerror5
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            export TAG=${{ github.sha }}
-            
+            set -e  # остановиться при любой ошибке
+
+            echo '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u romaerror5 --password-stdin
+
             cd /home/romaerror5/Desktop/devops/catty-reminders-app
-            
+
             git fetch origin
             git checkout lab4
             git reset --hard origin/lab4
-            
-            docker compose down || true
-            
-            docker compose up -d
+
+            ls -la docker-compose.yaml
+
+            docker compose down --volumes || true
+
+            docker compose up -d --remove-orphans
+
+            docker compose ps
