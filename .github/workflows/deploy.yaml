@@ -16,7 +16,9 @@ jobs:
           port: 3154
           username: romaerror5
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN
           script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u RomaError5 --password-stdin
             docker stop catty-container || true
             docker rm catty-container || true
             docker pull ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
