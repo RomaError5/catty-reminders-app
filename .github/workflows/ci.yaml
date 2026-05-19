@@ -1,28 +1,27 @@
-name: CI-pipeline
+name: CI
 
 on:
   push:
-  pull_request:
 
 jobs:
-  run-tests:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python environment
+      - name: Setup Python interpreter
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install required packages
+      - name: Install project dependencies
         run: |
           pip install -r requirements.txt pytest pytest-playwright
           playwright install chromium
 
-      - name: Start service
+      - name: Launch web application
         run: |
           uvicorn app.main:app --host 127.0.0.1 --port 8181 &
           for attempt in {1..20}; do
@@ -30,13 +29,29 @@ jobs:
             sleep 1
           done
 
-      - name: Run pytest suite
+      - name: Execute pytest suite
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: pytest -v --tb=short --junitxml=test_result.xml
 
-      - name: Archive test results
+      - name: Store test artifacts
         uses: actions/upload-artifact@v4
         with:
           name: test_result
           path: test_result.xml
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: romaerror5
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Package and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
+          build-args: |
+            DEPLOY_REF=${{ github.sha }}

@@ -17,7 +17,8 @@ jobs:
           username: romaerror5
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/romaerror5/Desktop/devops/catty-reminders-app
-            git pull origin lab2
-            echo "DEPLOY_REF=${{ github.sha }}" > .env
-            sudo systemctl restart app
+            docker stop catty-container || true
+            docker rm catty-container || true
+            docker pull ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
+            docker run -d --name catty-container -p 8181:8181 \
+              ghcr.io/romaerror5/catty-reminders-app:${{ github.sha }}
