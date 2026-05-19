@@ -8,19 +8,18 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: postgres:15-alpine
+      mysql:
+        image: mysql:8.0
         env:
-          POSTGRES_USER: catty
-          POSTGRES_PASSWORD: catty_password
-          POSTGRES_DB: catty
+          MYSQL_ROOT_PASSWORD: mypass
+          MYSQL_DATABASE: catty_reminders
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -33,13 +32,31 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          pip install -r requirements.txt pytest pytest-playwright
+          pip install -r requirements.txt pytest pytest-playwright mysql-connector-python
           playwright install chromium
 
       - name: Launch web application
         env:
-          DATABASE_URL: postgresql://catty:catty_password@localhost:5432/catty
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: mypass
+          MYSQL_DATABASE: catty_reminders
         run: |
+          echo '{
+            "secret_key": "Cats are awesome!",
+            "users": {
+              "heisenberg": "P@ssw0rd",
+              "tester": "foobar123"
+            },
+            "db_config": {
+              "host": "'$MYSQL_HOST'",
+              "port": '$MYSQL_PORT',
+              "user": "'$MYSQL_USER'",
+              "password": "'$MYSQL_PASSWORD'",
+              "database": "'$MYSQL_DATABASE'"
+            }
+          }' > config.json
           uvicorn app.main:app --host 127.0.0.1 --port 8181 &
           for attempt in {1..20}; do
             curl -s http://127.0.0.1:8181 && break

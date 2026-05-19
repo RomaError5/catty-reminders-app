@@ -21,7 +21,7 @@ services:
   app:
     image: ghcr.io/romaerror5/catty-reminders-app:${TAG:-latest}
     environment:
-      DATABASE_URL: postgresql://catty:catty_password@db:5432/catty
+      DATABASE_URL: mysql+mysqlconnector://root:mypass@db:3306/catty_reminders
     ports:
       - "8181:8181"
     networks:
