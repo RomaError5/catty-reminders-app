@@ -1,0 +1,105 @@
+name: Check grade update
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'grades.csv'
+    branches:
+      - main
+
+permissions: write-all
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    env:
+      TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Check pull request title
+        run: |
+          echo "PR title: $TITLE"
+
+          if [[ "$TITLE" != *"Оценка"* ]]; then
+            echo "❌ Pull request title must contain 'Оценка'"
+            exit 1
+          fi
+
+      - name: Parsing your PR title for group number
+        run: |
+          for VAR in 6311 6312 6313
+          do
+              if (echo $TITLE | grep -iqF "$VAR" ); then
+                  echo "GROUP=$VAR" >> "$GITHUB_ENV"
+                  break
+              fi      
+          done
+
+      - name: Checking your group number
+        run: |
+          if [[ $GROUP == '' ]]; then
+              echo "Your PR caption is not composed correctly"
+              exit 1
+          fi
+          echo Your group was parsed correctly - ${{ env.GROUP }}
+
+      - name: Setting PR labels
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: |
+            Grade
+
+      - name: Setting reviewer
+        if:  env.GROUP == '6313'
+        uses: AveryCameronUofR/add-reviewer-gh-action@1.0.3
+        with:
+          reviewers: "prafdin"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setting reviewer
+        if: env.GROUP == '6311' || env.GROUP == '6312'
+        uses: AveryCameronUofR/add-reviewer-gh-action@1.0.3
+        with:
+          reviewers: "danlla"
+          token: ${{ secrets.GITHUB_TOKEN }}
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+
+      - name: Check number of changed files
+        env:
+          CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_modified_files_count }}
+        run: |
+          if [ "$CHANGED_FILES_COUNT" -ne 1 ]; then
+            echo "❌ Invalid lines change: expected 1, got $DIFF"
+            exit 1
+          fi
+          echo "✅ Changed exactly 1 file"
+
+      - uses: actions/checkout@v4
+        with:
+          path: base
+
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: Boeing/validate-configs-action@v2.0.0
+        with:
+          search-paths: "pr"
+          file-types: "csv"
+
+      - name: Check numbers different lines
+        run: |
+          DIFF=$(diff -y --suppress-common-lines base/grades.csv pr/grades.csv | wc -l)
+
+          if [ "$DIFF" -ne 1 ]; then
+            echo "❌ Invalid lines change: expected 1, got $DIFF"
+            exit 1
+          fi
+
+          echo "✅ Changed exactly 1 line"

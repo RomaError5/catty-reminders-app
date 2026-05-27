@@ -6,6 +6,11 @@
   "poll_interval": 15,
   "users": [
     {
+      "login": "Ke1tas",
+      "id": "inozemtsev",
+      "app": "catty-reminders-app"
+    },
+    {
       "login": "SA3000UDP",
       "id": "sa3000udp",
       "app": "catty-reminders-app"
@@ -13,6 +18,11 @@
     {
       "login": "Velesikamid",
       "id": "kiselev",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "AlexChirkova",
+      "id": "chirkova",
       "app": "catty-reminders-app"
     },
     {
@@ -281,11 +291,6 @@
       "app": "catty-reminders-app"
     },
     {
-      "login": "AkatsukiDeki",
-      "id": "kruglov",
-      "app": "csharp-example"
-    },
-    {
       "login": "anzorcode05",
       "id": "magomedagaev",
       "app": "catty-reminders-app"
@@ -298,6 +303,96 @@
     {
       "login": "RomaError5",
       "id": "otyubrin",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "andreyKruglovRes",
+      "id": "kruglovdev",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "DANILA21-3",
+      "id": "cherkashin",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Bauntyy",
+      "id": "chesnokov",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "an664",
+      "id": "mas",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "freegotohell",
+      "id": "svyatkovskaya",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "https-katice",
+      "id": "krivonosova",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "NITSENSE",
+      "id": "kostsov",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "nikzavadskiy",
+      "id": "zavadskiy",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Cherakaev",
+      "id": "cherakaev",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "lizka19",
+      "id": "kolganowa",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "dmitri919",
+      "id": "malgin",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Amirprogrammer689",
+      "id": "baimukashev",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "avofl1ow",
+      "id": "tsvetkov",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "zurmes",
+      "id": "fadeev",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Tyty-land",
+      "id": "shankin",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Jupiter0303",
+      "id": "loshmankin",
+      "app": "csharp-example"
+    },
+    {
+      "login": "ctwoth",
+      "id": "dubrovin",
+      "app": "catty-reminders-app"
+    },
+    {
+      "login": "Getsomelight",
+      "id": "volyanyuk",
       "app": "catty-reminders-app"
     }
   ]
